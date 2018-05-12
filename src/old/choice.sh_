@@ -1,0 +1,45 @@
+Choice(){
+    trap "End; exit 1;" {1,2,3,15}
+    #End(){ { ScreenClear; tput cnorm; tput sgr0; stty echo 2>/dev/null; } }
+    #PrintChars(){ printf %${2}s | tr ' ' "$1"; }
+    #GetRow(){ IFS=';' read -sdR -p $'\E[6n' ROW COL;echo "${ROW#*[}" }
+    #GetCol(){ IFS=';' read -sdR -p $'\E[6n' ROW COL;echo "${COL#*[}" }
+    tput civis 
+    local cursor=0
+    while : ; do
+        for ((i=0; i<=$#; i++)); do
+            [ $i -eq $cursor ] && local pre='>'
+            [ $i -ne $cursor ] && local pre=' '
+            echo "$pre ${@:((i+1)):1}"
+            #local msg="$pre ${@:((i+1)):1}"
+            #local diff=$((`tput cols` - `GetCol`))
+            #local diff=$(($diff - 2))
+            #echo "$pre ${@:((i+1)):1}"`PrintChars 'X' $diff`
+        done
+        tput cuu $(($# + 1))
+        tput cub `tput cols`
+        local input=''
+        local input2=''
+
+        read -r -s -n1 input
+        if [[ $input == $'\x1b' ]]; then
+            read -r -s -n2 input2
+            #input+="$input2"
+            #echo "input='$input' xxd="`echo $input | xxd -p`
+            input2=`echo -n $input2 | xxd -p`
+            #echo "$input2 $#=$# cursor=$cursor"
+            case "$input2" in
+                '5b41') { [ 0 -lt $cursor ] && { ((cursor--)); continue; } };;
+                '5b42') { [ $cursor -lt $(($# - 1)) ] && { ((cursor++)); continue; } };;
+            esac
+            #case $input in
+            #    $'\x1b\x5b\x41') { [ 0 -lt $cursor ] && { ((cursor--)); continue; } };;
+            #    $'\x1b\x5b\x42') { [ $cursor -lt $# ] && { ((cursor++)); continue; } };;
+            #esac
+        fi
+        [[ '' == $input ]] && return $cursor;
+    done
+}
+Choice "はい" "いいえ"
+res=$?
+echo $res
